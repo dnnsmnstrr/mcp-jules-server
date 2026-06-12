@@ -21,14 +21,25 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: [
       {
-        name: "example_tool",
-        description: "An example tool",
+        name: "list_sources",
+        description: "List available sources from Jules API",
+        inputSchema: { type: "object", properties: {}, required: [] },
+      },
+      {
+        name: "create_session",
+        description: "Create a new session in Jules API",
+        inputSchema: { type: "object", properties: {}, required: [] },
+      },
+      {
+        name: "send_message",
+        description: "Send a message to a Jules session",
         inputSchema: {
           type: "object",
           properties: {
-            prompt: { type: "string" },
+            sessionId: { type: "string" },
+            message: { type: "string" },
           },
-          required: ["prompt"],
+          required: ["sessionId", "message"],
         },
       },
     ],
@@ -36,29 +47,24 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 });
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  if (request.params.name === "example_tool") {
-    const prompt = String(request.params.arguments?.prompt);
-    try {
-      const response = await axios.post(
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent",
-        { contents: [{ parts: [{ text: prompt }] }] },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            "X-Goog-Api-Key": API_KEY,
-          },
-        }
-      );
-      return {
-        content: [{ type: "text", text: JSON.stringify(response.data) }],
-      };
-    } catch (error) {
-      return {
-        content: [{ type: "text", text: "Error: " + error.message }],
-        isError: true,
-      };
-    }
+  const headers = { "X-Goog-Api-Key": API_KEY };
+  
+  if (request.params.name === "list_sources") {
+    const response = await axios.get("https://jules.google/v1/sources", { headers });
+    return { content: [{ type: "text", text: JSON.stringify(response.data) }] };
   }
+  
+  if (request.params.name === "create_session") {
+    const response = await axios.post("https://jules.google/v1/sessions", {}, { headers });
+    return { content: [{ type: "text", text: JSON.stringify(response.data) }] };
+  }
+  
+  if (request.params.name === "send_message") {
+    const { sessionId, message } = request.params.arguments as { sessionId: string, message: string };
+    const response = await axios.post(`https://jules.google/v1/sessions/${sessionId}/messages`, { message }, { headers });
+    return { content: [{ type: "text", text: JSON.stringify(response.data) }] };
+  }
+  
   throw new Error("Tool not found");
 });
 
