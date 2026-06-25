@@ -41,6 +41,12 @@ This server uses the **SSE (Server-Sent Events)** transport.
 
 If your MCP client supports SSE, you can configure it to connect to the endpoints above.
 
+### Authentication
+
+You can provide the Jules API key in two ways:
+1. **Server-side:** Set the `X_GOOG_API_KEY` environment variable when starting the server.
+2. **Client-side:** Send the `X-Goog-Api-Key` HTTP header with every request to the `/messages` endpoint. The server will prioritize this key if provided.
+
 ## Available Tools
 
 - `list_sources`: List available repositories connected to Jules.

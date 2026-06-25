@@ -3,6 +3,9 @@ import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import axios from "axios";
 import express from "express";
+import { AsyncLocalStorage } from "node:async_hooks";
+
+const apiKeyStorage = new AsyncLocalStorage<string>();
 
 const server = new Server(
   {
@@ -136,7 +139,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 });
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const headers = { "X-Goog-Api-Key": API_KEY };
+  const clientApiKey = apiKeyStorage.getStore();
+  const headers = { "X-Goog-Api-Key": clientApiKey || API_KEY };
   
   const { name, arguments: args } = request.params;
 
@@ -203,7 +207,10 @@ app.get("/sse", async (req, res) => {
 
 app.post("/messages", async (req, res) => {
   if (transport) {
-    await transport.handlePostMessage(req, res);
+    const apiKey = req.headers["x-goog-api-key"] as string;
+    apiKeyStorage.run(apiKey, async () => {
+      await transport!.handlePostMessage(req, res);
+    });
   } else {
     res.status(400).send("SSE transport not initialized");
   }
